@@ -210,4 +210,39 @@ public class CongestionTaxCalculator
             Console.WriteLine(e.Message);
         }
     }
+    
+    private int ApplyMaximumAmountLimit()
+    {
+        int totalToll = 0;
+        int tollPerDay = 0;
+        DateTime previousDate = DateTime.MinValue;
+
+        try
+        {
+            foreach (var distinctDate in _distinctDates)
+            {
+                Console.WriteLine($"Tax amount for distinct date {distinctDate.Date} is {distinctDate.Amount}.");
+
+                DateTime currentDate = distinctDate.Date;
+
+                // Check if it's a new day
+                if (previousDate.Date != currentDate.Date)
+                {
+                    tollPerDay = 0; // Reset the toll amount for the new day
+                    previousDate = currentDate;
+                }
+
+                // Ensure max value per a day equal to max limit defined by admin
+                int tollForDate = Math.Min(distinctDate.Amount, _maxLimit - tollPerDay);
+                totalToll += tollForDate;
+                tollPerDay += tollForDate;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        return totalToll;
+    }
 }
