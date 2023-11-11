@@ -180,7 +180,34 @@ public class CongestionTaxCalculator
         {
             Console.WriteLine(e.Message);
         }
-            
+        
+        // Find exempted vehicles
         return _tollFreeVehicles.Contains(vehicleType);
+    }
+    
+    private void ApplySingleChargeRule(DateTime currentDate, int currentAmount)
+    {
+
+        try
+        {
+            // Check if the current date is within 60 minutes of the previous distinct date
+            if (_distinctDates.Count == 0 || currentDate -
+                _distinctDates[_distinctDates.Count - 1].Date > TimeSpan.FromMinutes(_singleChargeMinutes))
+            {
+                _distinctDates.Add(new Toll { Date = currentDate, Amount = currentAmount });
+            }
+            else
+            {
+                // Update the amount if the current date has a higher amount
+                if (currentAmount > _distinctDates[_distinctDates.Count - 1].Amount)
+                {
+                    _distinctDates[_distinctDates.Count - 1].Amount = currentAmount;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 }
