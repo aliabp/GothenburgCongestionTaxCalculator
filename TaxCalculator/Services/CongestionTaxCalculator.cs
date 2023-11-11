@@ -38,60 +38,80 @@ public class CongestionTaxCalculator
     // It stores in app settings
     private readonly List<string> _tollFreeVehicles;
     
-            public CongestionTaxCalculator()
+    public CongestionTaxCalculator()
+    {
+        _config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", true, true)
+            .Build();
+        _distinctDates = new List<Toll>();
+        _taxIntervals = new List<TimeInterval>();
+        _publicHolidays = new List<DateTime>();
+        _taxFreeDates = new List<DateTime>();
+        _weekend = new List<DayOfWeek>();
+        try
         {
-            _config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", true, true)
-                .Build();
-            _distinctDates = new List<Toll>();
-            _taxIntervals = new List<TimeInterval>();
-            _publicHolidays = new List<DateTime>();
-            _taxFreeDates = new List<DateTime>();
-            _weekend = new List<DayOfWeek>();
-            try
+            // Get Maximum tax amount per a day for a vehicle from app settings
+            _maxLimit = int.Parse(_config["MaxLimit"].ToString());
+            
+            // Get Single Charge Rule period from app settings
+            _singleChargeMinutes = int.Parse(_config["SingleChargeMinutes"].ToString());
+
+            // Get weekend array from app settings
+            var weekend = _config.GetSection("Weekend").AsEnumerable();
+            foreach (var day in weekend)
             {
-                // Get Maximum tax amount per a day for a vehicle from app settings
-                _maxLimit = int.Parse(_config["MaxLimit"].ToString());
-                
-                // Get Single Charge Rule period from app settings
-                _singleChargeMinutes = int.Parse(_config["SingleChargeMinutes"].ToString());
-
-                // Get weekend array from app settings
-                var weekend = _config.GetSection("Weekend").AsEnumerable();
-                foreach (var day in weekend)
-                {
-                    if (day.Value != null)
-                        _weekend.Add((DayOfWeek)Enum.Parse(typeof(DayOfWeek), day.Value));
-                }
-
-                // Get exempted vehicles array from app settings
-                _tollFreeVehicles = new List<string>();
-                var vehicles = _config.GetSection("TollFreeVehicles").AsEnumerable();
-                foreach (var vehicle in vehicles)
-                {
-                    if (vehicle.Value != null)
-                        _tollFreeVehicles.Add(vehicle.Value);
-                }
-                
-                // Read tax rules data from database 
-                using (var dbContext = new ApplicationDbContext())
-                {
-                    _taxIntervals = dbContext.TimeIntervals.ToList();
-
-                    _publicHolidays = dbContext.TaxFreeDates
-                        .Where(d => d.Type == "PublicHoliday")
-                        .Select(x => x.Date )
-                        .ToList();
-                    
-                    _taxFreeDates = dbContext.TaxFreeDates
-                        .Where(d => d.Type == "TaxFreeDay")
-                        .Select(x => x.Date )
-                        .ToList();
-                }
+                if (day.Value != null)
+                    _weekend.Add((DayOfWeek)Enum.Parse(typeof(DayOfWeek), day.Value));
             }
-            catch (Exception e)
+
+            // Get exempted vehicles array from app settings
+            _tollFreeVehicles = new List<string>();
+            var vehicles = _config.GetSection("TollFreeVehicles").AsEnumerable();
+            foreach (var vehicle in vehicles)
             {
-                Console.WriteLine(e.Message);
+                if (vehicle.Value != null)
+                    _tollFreeVehicles.Add(vehicle.Value);
+            }
+            
+            // Read tax rules data from database 
+            using (var dbContext = new ApplicationDbContext())
+            {
+                _taxIntervals = dbContext.TimeIntervals.ToList();
+
+                _publicHolidays = dbContext.TaxFreeDates
+                    .Where(d => d.Type == "PublicHoliday")
+                    .Select(x => x.Date )
+                    .ToList();
+                
+                _taxFreeDates = dbContext.TaxFreeDates
+                    .Where(d => d.Type == "TaxFreeDay")
+                    .Select(x => x.Date )
+                    .ToList();
             }
         }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+    
+    private int GetTollFee(DateTime date)
+    {
+        int tollAmount = 0;
+        try
+        {
+            // Get tax amount from defined time intervals
+            foreach (TimeInterval interval in _taxIntervals)
+            {
+                TimeSpan currentTime = date.TimeOfDay;
+                if (currentTime >= interval.StartTime && currentTime <= interval.EndTime)
+                    tollAmount = interval.Amount;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        return tollAmount;
+    }
 }
