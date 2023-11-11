@@ -42,8 +42,8 @@ public class CongestionTaxCalculator
     public CongestionTaxCalculator()
     {
         _config = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", true, true)
-            .Build();
+                  .AddJsonFile("appsettings.json", true, true)
+                  .Build();
         _distinctDates = new List<Toll>();
         _taxIntervals = new List<TimeInterval>();
         _publicHolidays = new List<DateTime>();
@@ -94,6 +94,43 @@ public class CongestionTaxCalculator
         {
             Console.WriteLine(e.Message);
         }
+    }
+    
+    public int GetTax(IVehicle vehicle, List<DateTime> dates)
+    {
+        int totalFee = 0;
+            
+        try
+        {
+            // Sort the tolling dates by time
+            dates.Sort((x, y) => x.CompareTo(y));
+
+            foreach (DateTime date in dates)
+            {
+                // Check if the vehicle is toll free
+                if (IsTollFreeVehicle(vehicle))
+                    continue;
+
+                if (IsTollFreeDate(date))
+                    continue;
+
+                int tollAmount = 0;
+                // Find the applicable tax interval with the highest amount
+                tollAmount = GetTollFee(date);
+
+                // Distinct time intervals
+                ApplySingleChargeRule(date, tollAmount);
+            }
+
+            // Ensure Max limit in each day
+            totalFee = ApplyMaximumAmountLimit();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        return totalFee;
     }
     
     private int GetTollFee(DateTime date)
