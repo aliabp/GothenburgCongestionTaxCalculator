@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using TaxCalculator.Data;
+using TaxCalculator.Interfaces;
 using TaxCalculator.Models;
 
 namespace TaxCalculator.Services;
@@ -165,5 +166,21 @@ public class CongestionTaxCalculator
         }
 
         return daysBeforePublicHoliday.Contains(date.Date);
+    }
+    
+    private bool IsTollFreeVehicle(IVehicle vehicle)
+    {
+        if (vehicle == null) return false;
+        string vehicleType = "";
+        try
+        {
+            vehicleType = vehicle.GetVehicleType();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+            
+        return _tollFreeVehicles.Contains(vehicleType);
     }
 }
