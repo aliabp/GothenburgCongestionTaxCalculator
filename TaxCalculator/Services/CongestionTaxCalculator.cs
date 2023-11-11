@@ -114,4 +114,56 @@ public class CongestionTaxCalculator
         }
         return tollAmount;
     }
+    
+    private bool IsTollFreeDate(DateTime date)
+    {
+        try
+        {
+            // Check if the date is tax-free
+            if (_taxFreeDates.Contains(date.Date))
+            {
+                Console.WriteLine($"Date {date} is in tax free days.");
+                return true;
+            }
+
+            // Check if the date is a weekend
+            if (_weekend.Contains(date.DayOfWeek))
+            {
+                Console.WriteLine($"Date {date} is weekend.");
+                return true;
+            }
+
+            // Check if the date is a public holiday or day before a public holiday
+            if (_publicHolidays.Contains(date.Date) || IsDayBeforePublicHoliday(date))
+            {
+                Console.WriteLine($"Date {date} is in public holidays.");
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+            
+        return false;
+    }
+
+    private bool IsDayBeforePublicHoliday(DateTime date)
+    {
+        List<DateTime> daysBeforePublicHoliday = new List<DateTime>();
+        try
+        {
+            foreach (var holiday in _publicHolidays)
+            {
+                // Find days before holidays
+                daysBeforePublicHoliday.Add(holiday.AddDays(-1));
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        return daysBeforePublicHoliday.Contains(date.Date);
+    }
 }
